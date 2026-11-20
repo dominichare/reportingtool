@@ -238,3 +238,73 @@ export async function writeNote(prompt, onStatus = () => {}) {
 }
 
 export { ProviderError };
+
+// ---------------- Key checks (free or near-free) ----------------
+// Returns a short success message, or throws a ProviderError with a friendly explanation.
+export async function checkKey(kind) {
+  const s = getSettings();
+  const need = (v, what) => { if (!v) throw new ProviderError(`Enter the ${what} first.`); };
+  switch (kind) {
+    case 'assemblyai': {
+      need(s.assemblyaiKey, 'API key');
+      await call('AssemblyAI', 'https://api.assemblyai.com/v2/transcript?limit=1', { headers: { authorization: s.assemblyaiKey } });
+      return 'AssemblyAI accepted the key.';
+    }
+    case 'openai': {
+      need(s.openaiKey, 'API key');
+      await call('OpenAI', 'https://api.openai.com/v1/models/gpt-4o-transcribe-diarize', { headers: { authorization: `Bearer ${s.openaiKey}` } });
+      return 'OpenAI accepted the key, and the transcription model is available.';
+    }
+    case 'openai-llm': {
+      need(s.openaiKey, 'API key');
+      const model = s.openaiModel || 'gpt-5';
+      const res = await fetch(`https://api.openai.com/v1/models/${encodeURIComponent(model)}`, { headers: { authorization: `Bearer ${s.openaiKey}` } }).catch(() => null);
+      if (!res) throw new ProviderError('Couldn’t reach OpenAI. Check your internet connection.');
+      if (res.status === 404) throw new ProviderError(`The key works, but the model “${model}” isn’t available to your account. Try another model name, e.g. gpt-5-mini.`);
+      if (res.status === 401 || res.status === 403) throw new ProviderError('OpenAI didn’t accept the API key.');
+      if (!res.ok) throw new ProviderError(`OpenAI returned an error (${res.status}).`);
+      return `OpenAI accepted the key, and “${model}” is available.`;
+    }
+    case 'azure': {
+      need(s.azureSpeechKey, 'key');
+      need(s.azureSpeechRegion, 'region');
+      const url = `https://${encodeURIComponent(s.azureSpeechRegion.trim().toLowerCase().replace(/\s+/g, ''))}.api.cognitive.microsoft.com/sts/v1.0/issueToken`;
+      await call('Azure Speech', url, { method: 'POST', headers: { 'Ocp-Apim-Subscription-Key': s.azureSpeechKey } });
+      return 'Azure Speech accepted the key for this region.';
+    }
+    case 'anthropic': {
+      need(s.anthropicKey, 'API key');
+      const { default: Anthropic } = await import('../vendor/anthropic-sdk-1.6.0.mjs');
+      const client = new Anthropic({ apiKey: s.anthropicKey, dangerouslyAllowBrowser: true, maxRetries: 1 });
+      const model = s.anthropicModel || 'claude-opus-5-5';
+      try {
+        await client.models.retrieve(model);
+      } catch (e) {
+        if (e instanceof Anthropic.NotFoundError) throw new ProviderError(`The key works, but the model “${model}” wasn’t found. Use claude-opus-5-5.`);
+        if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) throw new ProviderError('Claude didn’t accept the API key.');
+        if (e instanceof Anthropic.APIConnectionError) throw new ProviderError('Couldn’t reach Claude. Check your internet connection.');
+        if (e instanceof Anthropic.APIError) throw new ProviderError(`Claude returned an error (${e.status ?? 'unknown'}).`);
+        throw e;
+      }
+      return `Claude accepted the key, and “${model}” is available.`;
+    }
+    case 'azureopenai': {
+      need(s.azureOpenaiEndpoint, 'endpoint');
+      need(s.azureOpenaiDeployment, 'deployment name');
+      need(s.azureOpenaiKey, 'key');
+      const ep = s.azureOpenaiEndpoint.replace(/\/+$/, '');
+      const url = `${ep}/openai/deployments/${encodeURIComponent(s.azureOpenaiDeployment)}/chat/completions?api-version=2024-10-21`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'api-key': s.azureOpenaiKey, 'content-type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'user', content: 'Reply with the single word OK.' }] }),
+      }).catch(() => null);
+      if (!res) throw new ProviderError('Couldn’t reach that endpoint. Check the endpoint address and your internet connection.');
+      if (res.status === 404) throw new ProviderError('The endpoint was reached, but that deployment name wasn’t found. Check the deployment name with IT.');
+      if (res.status === 401 || res.status === 403) throw new ProviderError('Azure OpenAI didn’t accept the key.');
+      if (!res.ok) throw new ProviderError(`Azure OpenAI returned an error (${res.status}).`);
+      return 'Azure OpenAI is working with this deployment.';
+    }
+  }
+  throw new ProviderError('Nothing to check.');
+}

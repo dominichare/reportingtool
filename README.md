@@ -29,7 +29,7 @@ No keys or personal data are in the code. Keys are entered on the phone and stay
 
 1. Open the address above in **Chrome** on the phone.
 2. Tap **⋮ → Add to Home screen → Install**.
-3. Open **Minutes** and tap the **⚙︎** icon. Enter your name and the API keys (below).
+3. Open **Minutes** and tap **Help → Getting started**. It walks you through each step. Every service guide lets you paste your key and tap **Check** to confirm it works.
 
 To process a recording, open it in Easy Recorder (or the My Files app), tap **Share**, and choose **Minutes**. You can also tap **Choose recording** in the app.
 
@@ -104,6 +104,7 @@ Both the one-on-ones folder name and the prefixes can be changed in Settings. Un
 | `js/app.js` | Screens and flow. |
 | `js/providers.js` | Transcription and note-writing providers. |
 | `js/note.js` | Note template, AI instructions and Word layout. |
+| `js/help.js` | In-app Help: setup guides for every service, with key checks. |
 | `js/docx.js` | Dependency-free Word (.docx) writer. |
 | `js/graph.js` | Microsoft sign-in, OneDrive, SharePoint, Outlook and People. |
 | `js/settings.js`, `js/db.js` | On-device settings, remembered people and job storage. |

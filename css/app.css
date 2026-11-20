@@ -446,6 +446,29 @@ button.row:active, a.row:active { background: var(--fill); }
   100% { opacity: 0; transform: translateY(10px); }
 }
 
+/* ---------- Help ---------- */
+.eyebrow { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); margin: 4px 4px 0; }
+.fact-label { font-size: 13px; color: var(--label-2); text-transform: uppercase; letter-spacing: 0.03em; }
+.fact { font-size: 16px; line-height: 1.4; overflow-wrap: break-word; }
+.status-pill {
+  font-size: 13px; color: var(--label-2); background: var(--fill); border-radius: 10px; padding: 2px 8px; flex: none;
+}
+.status-pill.on { color: #fff; background: var(--green); }
+.table-card { padding: 4px 12px 6px; }
+.help-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; line-height: 1.35; }
+.help-table th, .help-table td { text-align: left; vertical-align: top; padding: 9px 6px 9px 0; overflow-wrap: break-word; }
+.help-table td { hyphens: auto; }
+.help-table thead th {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--label-2);
+  border-bottom: 0.5px solid var(--sep);
+}
+.help-table tbody tr + tr th, .help-table tbody tr + tr td { border-top: 0.5px solid var(--sep); }
+.help-table tbody th { font-weight: 600; }
+.prose { font-size: 15px; color: var(--label-2); margin: 10px 16px 0; line-height: 1.45; }
+.prose b { color: var(--label); }
+a.btn { text-decoration: none; }
+.btn.is-on { background: rgba(52, 199, 89, 0.14); color: var(--green); pointer-events: none; }
+
 .hidden { display: none !important; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .mt { margin-top: 12px; }

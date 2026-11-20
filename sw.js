@@ -1,7 +1,7 @@
 /* Minutes service worker: offline app shell + Android Share-sheet target. */
 importScripts('js/db.js');
 
-const VERSION = 'minutes-v1';
+const VERSION = 'minutes-v2';
 const SHELL = [
   './',
   'index.html',
@@ -15,6 +15,7 @@ const SHELL = [
   'js/note.js',
   'js/docx.js',
   'js/graph.js',
+  'js/help.js',
   'vendor/anthropic-sdk-1.6.0.mjs',
   'icons/icon-192.png',
   'icons/icon-512.png',

@@ -2,7 +2,8 @@ import {
   getSettings, saveSettings, sttReady, llmReady,
   getPeople, savePeople, rememberPerson, findPerson, topPeople,
 } from './settings.js';
-import { transcribe, writeNote, STT_PROVIDERS, LLM_PROVIDERS } from './providers.js';
+import { transcribe, writeNote, checkKey, STT_PROVIDERS, LLM_PROVIDERS } from './providers.js';
+import { HELP_SECTIONS, HELP_TOPICS, itRequestText } from './help.js';
 import {
   buildPrompt, noteDocx, transcriptDocx, noteFileName, transcriptFileName,
   guessDate, longDate, fmtTime, namedTranscript, participantNames,
@@ -207,10 +208,10 @@ function homeScreen(el) {
   const s = getSettings();
   const ready = sttReady(s) && llmReady(s) && s.myName;
   el.innerHTML = `
-    ${navBar({ title: 'Minutes', right: `<button class="nav-btn" data-settings aria-label="Settings">${I.gear}</button>` })}
+    ${navBar({ title: 'Minutes', right: `<button class="nav-btn" data-help>Help</button><button class="nav-btn" data-settings aria-label="Settings">${I.gear}</button>` })}
     <main class="content">
       <h1 class="large-title">Minutes</h1>
-      ${ready ? '' : `<button class="notice warn" data-setup>${I.warn}<div><div class="t">Finish setting up</div><div class="s">Add your name and the API keys for transcription and note writing.</div></div></button>`}
+      ${ready ? '' : `<button class="notice warn" data-setup>${I.warn}<div><div class="t">Finish setting up</div><div class="s">Add your name and the AI services for transcription and note writing. Tap for a step-by-step guide.</div></div></button>`}
       <div class="hero">
         <div class="hero-icon">${I.wave}</div>
         <h2>New meeting note</h2>
@@ -221,7 +222,8 @@ function homeScreen(el) {
       <div data-lists></div>
     </main>`;
   $('[data-settings]', el).addEventListener('click', () => push(settingsScreen));
-  $('[data-setup]', el)?.addEventListener('click', () => push(settingsScreen));
+  $('[data-setup]', el)?.addEventListener('click', () => push(e => helpTopicScreen(e, 'start')));
+  $('[data-help]', el).addEventListener('click', () => push(helpScreen));
   const file = $('[data-file]', el);
   $('[data-pick]', el).addEventListener('click', () => file.click());
   file.addEventListener('change', () => { if (file.files[0]) startJob(file.files[0]); });
@@ -1194,17 +1196,21 @@ function settingsScreen(el) {
     <main class="content">
       <h1 class="large-title">Settings</h1>
 
+      <div class="group mt">
+        <button class="row has-icon" data-helpall><div class="row-icon" style="background:var(--accent)">${I.info}</div><div class="row-main"><div class="row-title">Help and setup guides</div></div><span class="chev">${I.chev}</span></button>
+      </div>
+
       <div class="group-header">You</div>
       <div class="group">${input('myName', 'Your name', { placeholder: 'Firstname Surname' })}${input('myEmail', 'Email', { type: 'email', placeholder: 'Optional' })}</div>
       <div class="group-footer">The voice that talks most is labelled with your name automatically.</div>
 
       <div class="group-header">Transcription</div>
       <div class="group">${seg('sttProvider', STT_PROVIDERS)}${sttFields}</div>
-      <div class="group-footer">${esc(STT_PROVIDERS[s.sttProvider].hint)}</div>
+      <div class="group-footer">${esc(STT_PROVIDERS[s.sttProvider].hint)} <a href="#" data-guide="${{ assemblyai: 'assemblyai', openai: 'openai-stt', azure: 'azure-speech' }[s.sttProvider]}">How to set up ${esc(STT_PROVIDERS[s.sttProvider].label)} ›</a></div>
 
       <div class="group-header">Note writing</div>
       <div class="group">${seg('llmProvider', LLM_PROVIDERS)}${llmFields}</div>
-      <div class="group-footer">${esc(LLM_PROVIDERS[s.llmProvider].hint)} Keys are stored only on this phone.</div>
+      <div class="group-footer">${esc(LLM_PROVIDERS[s.llmProvider].hint)} Keys are stored only on this phone. <a href="#" data-guide="${{ anthropic: 'claude', openai: 'openai-llm', azureopenai: 'azure-openai' }[s.llmProvider]}">How to set up ${esc(LLM_PROVIDERS[s.llmProvider].label)} ›</a></div>
 
       <div class="group-header">Microsoft 365</div>
       <div class="group">
@@ -1215,7 +1221,7 @@ function settingsScreen(el) {
              <button class="row destructive" data-signout><div class="row-main"><div class="row-title">Sign out</div></div></button>`
           : `<button class="row link" data-signin ${s.msClientId ? '' : 'disabled style="opacity:.4"'}><div class="row-main"><div class="row-title">Sign in</div></div></button>`}
       </div>
-      <div class="group-footer">Optional. When signed in, notes save straight to OneDrive and SharePoint and the email draft is created for you. Without it, you share the files to the OneDrive and Outlook apps yourself. See the setup guide for what to ask IT.</div>
+      <div class="group-footer">Optional. When signed in, notes save straight to OneDrive and SharePoint and the email draft is created for you. Without it, you share the files to the OneDrive and Outlook apps yourself. <a href="#" data-guide="microsoft365">What to ask IT ›</a></div>
 
       <div class="group-header">Folders</div>
       <div class="group">
@@ -1263,6 +1269,8 @@ function settingsScreen(el) {
     try { const f = await getFolders({ refresh: true }); fc.textContent = `${f.subject.length} projects`; toast(`Found ${f.subject.length} project folders and ${f.oneOnOnes.length} one-on-one folders.`); } catch (e) { fc.textContent = ''; toast(e.message); }
   });
   $('[data-people]', el).addEventListener('click', () => push(peopleScreen));
+  $('[data-helpall]', el).addEventListener('click', () => push(helpScreen));
+  $$('[data-guide]', el).forEach(a => a.addEventListener('click', e => { e.preventDefault(); push(x => helpTopicScreen(x, a.dataset.guide)); }));
 }
 
 function peopleScreen(el) {
@@ -1285,6 +1293,144 @@ function peopleScreen(el) {
   $$('[data-del]', el).forEach(b => b.addEventListener('click', () => {
     people.splice(+b.dataset.del, 1); savePeople(people); peopleScreen(el);
   }));
+}
+
+
+// =====================================================================
+// Help
+// =====================================================================
+
+const appAddress = () => location.origin + location.pathname.replace(/index\.html$/, '');
+
+function topicStatus(id) {
+  const s = getSettings();
+  const t = HELP_TOPICS[id];
+  if (!t.use) {
+    if (id === 'microsoft365') return MS.msSignedIn() ? 'Signed in' : '';
+    return '';
+  }
+  const inUse = s[t.use.setting] === t.use.value;
+  const filled = (t.fields || []).every(f => s[f.key]);
+  return inUse && filled ? 'In use' : filled ? 'Set up' : '';
+}
+
+function helpScreen(el) {
+  el.innerHTML = `
+    ${navBar({ title: 'Help', back: true, backLabel: 'Back' })}
+    <main class="content">
+      <h1 class="large-title">Help</h1>
+      <p class="lede">Step-by-step guides for setting up each service. Each guide lets you paste in your key and check it works.</p>
+      ${HELP_SECTIONS.map(sec => `
+        <div class="group-header">${esc(sec.title)}</div>
+        <div class="group">${sec.topics.map(id => {
+          const t = HELP_TOPICS[id];
+          const st = topicStatus(id);
+          return `<button class="row has-icon" data-topic="${id}">
+            <div class="row-icon" style="background:${t.color}">${I[t.icon] || I.info}</div>
+            <div class="row-main"><div class="row-title">${esc(t.title)}</div></div>
+            ${st ? `<span class="status-pill${st === 'In use' || st === 'Signed in' ? ' on' : ''}">${esc(st)}</span>` : ''}
+            <span class="chev">${I.chev}</span>
+          </button>`;
+        }).join('')}</div>`).join('')}
+    </main>`;
+  bindBack(el);
+  $$('[data-topic]', el).forEach(b => b.addEventListener('click', () => push(x => helpTopicScreen(x, b.dataset.topic))));
+}
+
+function helpTable(tb) {
+  return `<div class="group-header">${esc(tb.caption)}</div>
+    <div class="group table-card"><table class="help-table">
+      <colgroup><col style="width:27%"><col style="width:32%"><col style="width:23%"><col style="width:18%"></colgroup>
+      <thead><tr>${tb.header.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+      <tbody>${tb.rows.map(r => `<tr>${r.map((c, i) => i === 0 ? `<th scope="row">${esc(c)}</th>` : `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+function helpTopicScreen(el, id) {
+  const t = HELP_TOPICS[id];
+  const s = getSettings();
+  const copyText = txt => txt.replace('{REDIRECT}', appAddress());
+
+  el.innerHTML = `
+    ${navBar({ title: t.title, back: true, backLabel: 'Help' })}
+    <main class="content">
+      ${t.kind ? `<div class="eyebrow">${esc(t.kind)}</div>` : ''}
+      <h1 class="large-title">${esc(t.title)}</h1>
+      <p class="lede">${esc(t.summary)}</p>
+
+      ${t.facts ? `<div class="group">${t.facts.map(([k, v]) => `
+        <div class="row row-stack"><div class="fact-label">${esc(k)}</div><div class="fact">${v}</div></div>`).join('')}</div>` : ''}
+
+      ${t.table ? helpTable(t.table) : ''}
+      ${t.table2 ? helpTable(t.table2) : ''}
+      ${t.after ? `<div class="prose">${t.after}</div>` : ''}
+
+      ${t.steps ? `<div class="group-header">${t.fields ? 'How to set it up' : 'Steps'}</div>
+      ${t.steps.map((st, i) => `<div class="step-card">
+        <div class="h"><div class="n">${i + 1}</div>${esc(st.title)}</div>
+        <p>${st.body}</p>
+        ${st.url || st.copy || st.link || st.action ? `<div class="btn-row">
+          ${st.url ? `<a class="btn btn-secondary" href="${esc(st.url)}" target="_blank" rel="noopener">${I.share}<span>${esc(st.urlLabel || 'Open website')}</span></a>` : ''}
+          ${st.copy ? `<button class="btn btn-secondary" data-copy="${i}">${I.copy}<span>${esc(st.copyLabel || 'Copy')}</span></button>` : ''}
+          ${st.link ? `<button class="btn btn-secondary" data-link="${st.link.topic}"><span>${esc(st.link.label)}</span>${I.chev.replace('<svg', '<svg style="width:12px;height:12px"')}</button>` : ''}
+          ${st.action === 'settings' ? `<button class="btn btn-secondary" data-opensettings>${I.gear}<span>Open Settings</span></button>` : ''}
+        </div>` : ''}
+      </div>`).join('')}` : ''}
+
+      ${t.fields ? `
+      <div class="group-header">Your details</div>
+      <div class="group">${t.fields.map(f => `
+        <div class="row"><div class="row-title" style="flex:none">${esc(f.label)}</div>
+        <input class="inline" data-k="${f.key}" type="${f.type || 'text'}" value="${esc(s[f.key] || '')}" placeholder="${esc(f.placeholder || '')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>`).join('')}
+      </div>
+      <div class="group-footer">Saved on this phone as you type.</div>
+      ${t.check ? `<button class="btn btn-secondary mt" data-check>${I.check}<span>Check</span></button><div data-result></div>` : ''}
+      ${t.use ? `<button class="btn btn-primary mt" data-use></button>` : ''}
+      ` : ''}
+      <div style="height:24px"></div>
+    </main>`;
+  bindBack(el);
+
+  $$('[data-k]', el).forEach(inp => inp.addEventListener('input', () => {
+    saveSettings({ [inp.dataset.k]: inp.value.trim() });
+    const r = $('[data-result]', el); if (r) r.innerHTML = '';
+    drawUse();
+  }));
+  $$('[data-copy]', el).forEach(b => b.addEventListener('click', () => copy(copyText(t.steps[+b.dataset.copy].copy), 'Copied: paste it into an email')));
+  $$('[data-link]', el).forEach(b => b.addEventListener('click', () => push(x => helpTopicScreen(x, b.dataset.link))));
+  $$('[data-opensettings]', el).forEach(b => b.addEventListener('click', () => push(settingsScreen)));
+
+  const check = $('[data-check]', el);
+  check?.addEventListener('click', async () => {
+    const r = $('[data-result]', el);
+    check.disabled = true;
+    r.innerHTML = `<div class="notice info">${I.info}<div><div class="s">Checking…</div></div></div>`;
+    try {
+      const msg = await checkKey(t.check);
+      r.innerHTML = `<div class="notice ok">${I.okc}<div><div class="t">It works</div><div class="s">${esc(msg)}</div></div></div>`;
+    } catch (e) {
+      r.innerHTML = `<div class="notice err">${I.warn}<div><div class="t">Not working yet</div><div class="err-text">${esc(e.message || e)}</div></div></div>`;
+    } finally {
+      check.disabled = false;
+    }
+  });
+
+  function drawUse() {
+    const b = $('[data-use]', el);
+    if (!b) return;
+    const cur = getSettings();
+    const inUse = cur[t.use.setting] === t.use.value;
+    const filled = t.fields.every(f => cur[f.key]);
+    b.innerHTML = inUse ? `${I.check}<span>In use for ${esc(t.kind.toLowerCase())}</span>` : `<span>${esc(t.use.label)}</span>`;
+    b.classList.toggle('is-on', inUse);
+    b.disabled = !inUse && !filled;
+  }
+  $('[data-use]', el)?.addEventListener('click', () => {
+    saveSettings({ [t.use.setting]: t.use.value });
+    drawUse();
+    toast(`${t.title.replace(/ \(.*\)$/, '')} is now used for ${t.kind.toLowerCase()}.`);
+  });
+  drawUse();
 }
 
 // =====================================================================
