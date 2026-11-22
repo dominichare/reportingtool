@@ -1,7 +1,7 @@
 /* Minutes service worker: offline app shell + Android Share-sheet target. */
 importScripts('js/db.js');
 
-const VERSION = 'minutes-v2';
+const VERSION = 'minutes-v3';
 const SHELL = [
   './',
   'index.html',

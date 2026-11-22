@@ -73,6 +73,18 @@ svg { display: block; }
 
 #app { position: fixed; inset: 0; overflow: hidden; }
 
+/* On a computer or tablet, keep the phone-sized layout centred. */
+@media (min-width: 600px) {
+  html { background: #e5e5ea; }
+  body { background: #e5e5ea; }
+  #app, .sheet { max-width: 480px; margin: 0 auto; }
+  #app { box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 10px 40px rgba(0, 0, 0, 0.12); }
+  #toast { max-width: 480px; margin: 0 auto; }
+}
+@media (min-width: 600px) and (prefers-color-scheme: dark) {
+  html, body { background: #111; }
+}
+
 /* ---------- Screens & navigation ---------- */
 .screen {
   position: absolute; inset: 0;

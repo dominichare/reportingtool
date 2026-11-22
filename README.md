@@ -16,14 +16,16 @@ The transcript is saved as a separate Word file next to the note.
 
 ## 1. Put it online (one-off)
 
-The app is a set of static files. It needs to be served over HTTPS so Android can install it. The simplest host is **GitHub Pages**:
+The app is a set of static files. It needs to be served over HTTPS so Android can install it. Use **GitHub Pages**, which is free:
 
-1. Merge this branch into `main`.
-2. In the repository: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-3. The included workflow (`.github/workflows/pages.yml`) publishes the site to
-   `https://<your-github-username>.github.io/reportingtool/`.
+1. In the repository, open **Settings → Pages**.
+2. Under **Build and deployment**, set **Source** to **Deploy from a branch**.
+3. Choose branch **`ccr-66117013-brxjyu`**, folder **`/ (root)`**, and tap **Save**.
+4. After a minute or two the app is live at **`https://dominichare.github.io/reportingtool/`**.
 
 No keys or personal data are in the code. Keys are entered on the phone and stay on the phone.
+
+See **`PICKUP-NOTE.md`** for the full first-time setup and test routine.
 
 ## 2. Install on the phone
 
